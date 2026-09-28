@@ -1,13 +1,18 @@
-# 📚 Vokabeltrainer Englisch
+# 🎧 Vocab Beats – Englisch-Vokabeltrainer für Felix
 
-Ein Vokabeltrainer im Stil von Duolingo, aber mit **den eigenen Vokabeln aus dem Schulbuch**.
+Ein Vokabeltrainer im Stil von Duolingo, aber mit **den eigenen Vokabeln aus dem Schulbuch** – und mit
+Tech-House-Beat: Jede richtige Antwort in Folge baut den Track weiter auf (Kick → Hi-Hats → Bass → Clap → **Drop**).
+Ein Fehler lässt den Track kurz „absaufen“ und der Aufbau beginnt von vorn.
 Es ist eine Web-App (PWA): Sie läuft in Safari und lässt sich auf dem iPhone wie eine normale App auf den
 Home-Bildschirm legen. Danach funktioniert sie auch **ohne Internet**. Alle Daten bleiben auf dem Gerät.
 
 ## Funktionen
 
-- **Lernen wie bei Duolingo**: kurze Lektionen mit 10 Wörtern, Fortschrittsbalken, XP, Tagesziel,
+- **Lernen wie bei Duolingo**: kurze Lektionen („Tracks“) mit 10 Wörtern, Fortschrittsbalken, XP, Tagesziel,
   🔥-Serie (Tage in Folge), Konfetti 🎉
+- **Tech-House-Beat** (124 BPM), live im Browser erzeugt – ohne Audiodateien. Lautstärke einstellbar, abschaltbar.
+- **DJ-Ränge** von „Bedroom-DJ“ bis „DJ-Legende“ und **12 Trophäen** (Combos, Serien, gesammelte Wörter …)
+- Club-Design in Neonfarben
 - **Abwechslungsreiche Übungen**, die mit dem Können schwieriger werden:
   - Multiple Choice (Englisch → Deutsch und Deutsch → Englisch)
   - Hörverständnis: das Wort wird vorgelesen 🔊 (auch langsam 🐢)
@@ -46,6 +51,11 @@ Danach klappt sie auch offline.
   erst mit „Nur Englisch“ die linke Spalte, dann mit „Nur Deutsch“ die rechte Spalte fotografieren
 - Alternativ die iPhone-Funktion **„Text scannen“**: lange in ein Textfeld tippen → „Text scannen“
 
+## Ton
+
+Beat und Sprachausgabe sind nur zu hören, wenn der **Stummschalter** am iPhone aus ist. Der Beat wird
+automatisch leiser, während ein Wort vorgelesen wird.
+
 ## Wichtig: Daten sichern
 
 Die Vokabeln sind nur im Browser-Speicher des iPhones gespeichert. Wer die App löscht oder die
@@ -61,6 +71,7 @@ Reines HTML/CSS/JavaScript ohne Build-Schritt:
 | `index.html` | Grundgerüst |
 | `js/app.js` | App-Logik (Ansichten, Lektionen, Speicherung, Kamera/OCR) |
 | `js/answers.js` | Antwortprüfung und Zerlegen des erkannten Textes |
+| `js/beat.js` | Beat-Engine (Web Audio) und Soundeffekte |
 | `css/style.css` | Design |
 | `sw.js` | Service Worker für den Offline-Betrieb |
 | `manifest.webmanifest`, `icons/` | App-Name und -Icons für den Home-Bildschirm |

@@ -13,16 +13,46 @@ const XP_CORRECT = 10;
 const XP_PERFECT_BONUS = 20;
 const TESSERACT_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
 
-const SAMPLE_UNIT = 'Beispiel: Unit 1';
+const DEFAULT_NAME = 'Felix';
+const SAMPLE_UNIT = 'Beispiel: Music & Me';
 const SAMPLE_WORDS = [
-  ['school', 'die Schule'], ['teacher', 'der Lehrer, die Lehrerin'], ['friend', 'der Freund, die Freundin'],
-  ['(to) learn', 'lernen'], ['homework', 'die Hausaufgaben'], ['holidays', 'die Ferien'],
-  ['(to) play', 'spielen'], ['breakfast', 'das Frühstück'], ['always', 'immer'],
-  ['sometimes', 'manchmal'], ['beautiful', 'schön'], ['(to) be hungry', 'Hunger haben'],
-  ['brother', 'der Bruder'], ['sister', 'die Schwester'], ['What time is it?', 'Wie spät ist es?'],
+  ['music', 'die Musik'], ['song', 'das Lied, der Song'], ['loud', 'laut'], ['quiet', 'leise'],
+  ['(to) dance', 'tanzen'], ['(to) listen to', 'zuhören, anhören'], ['headphones', 'die Kopfhörer'],
+  ['favourite', 'Lieblings-'], ['friend', 'der Freund, die Freundin'], ['school', 'die Schule'],
+  ['homework', 'die Hausaufgaben'], ['(to) play', 'spielen'], ['always', 'immer'],
+  ['sometimes', 'manchmal'], ['What time is it?', 'Wie spät ist es?'],
 ];
 
-const PRAISE = ['Super! 🎉', 'Richtig! ✨', 'Klasse! 💪', 'Genau! 👏', 'Stark! 🚀', 'Perfekt! ⭐'];
+const PRAISE = ['Fett! 🔥', 'Banger! 💥', 'Voll im Takt! 🎶', 'Sauber! ✨', 'Stark! 💪', 'Nice! 😎', 'Läuft! 🚀'];
+const WRONG_MSG = ['Knapp daneben! 🎧', 'Aus dem Takt 😅', 'Nicht ganz – weiter geht’s!'];
+const DROP_MSG = ['DROP! 🔊', 'Bass rein! 🔊', 'Crowd geht ab! 🙌'];
+
+// DJ-Ränge nach gesammelten XP
+const RANKS = [
+  { xp: 0, name: 'Bedroom-DJ', icon: '🎧' },
+  { xp: 100, name: 'Party-DJ', icon: '🪩' },
+  { xp: 300, name: 'Warm-up-DJ', icon: '🎚️' },
+  { xp: 700, name: 'Resident-DJ', icon: '🎛️' },
+  { xp: 1500, name: 'Club-Headliner', icon: '💿' },
+  { xp: 3000, name: 'Festival-Headliner', icon: '🎪' },
+  { xp: 6000, name: 'DJ-Legende', icon: '👑' },
+];
+
+// Trophäen: check bekommt den Zustand und (falls vorhanden) das Ergebnis der letzten Lektion
+const BADGES = [
+  { id: 'first', icon: '🎵', name: 'Erster Track', desc: 'Die erste Lektion geschafft', check: s => s.stats.sessions >= 1 },
+  { id: 'perfect', icon: '💎', name: 'Fehlerfreier Mix', desc: 'Eine Lektion ohne Fehler', check: (s, r) => r && r.perfect },
+  { id: 'drop', icon: '🔊', name: 'Drop-Master', desc: 'Den Drop erreicht (6 richtig in Folge)', check: (s, r) => r && r.maxCombo >= 6 },
+  { id: 'combo15', icon: '⚡', name: 'Endlos-Groove', desc: '15 richtig in Folge', check: (s, r) => r && r.maxCombo >= 15 },
+  { id: 'streak3', icon: '🔥', name: '3-Tage-Groove', desc: '3 Tage in Folge gelernt', check: s => s.stats.streak >= 3 },
+  { id: 'streak7', icon: '📅', name: 'Wochen-Rave', desc: '7 Tage in Folge gelernt', check: s => s.stats.streak >= 7 },
+  { id: 'streak30', icon: '🏆', name: 'Monats-Marathon', desc: '30 Tage in Folge gelernt', check: s => s.stats.streak >= 30 },
+  { id: 'scan', icon: '📷', name: 'Scanner', desc: 'Vokabeln per Foto erfasst', check: s => s.stats.scans >= 1 },
+  { id: 'words50', icon: '📦', name: 'Crate Digger', desc: '50 Vokabeln gesammelt', check: s => s.words.length >= 50 },
+  { id: 'words200', icon: '🗄️', name: 'Plattensammler', desc: '200 Vokabeln gesammelt', check: s => s.words.length >= 200 },
+  { id: 'safe25', icon: '🧠', name: 'Gedächtnis-Booster', desc: '25 Wörter sicher gelernt', check: s => s.words.filter(w => w.box >= SAFE_BOX).length >= 25 },
+  { id: 'safe100', icon: '🚀', name: 'Vokabel-Rakete', desc: '100 Wörter sicher gelernt', check: s => s.words.filter(w => w.box >= SAFE_BOX).length >= 100 },
+];
 
 /* ---------- Hilfsfunktionen ---------- */
 
@@ -68,8 +98,12 @@ function defaultState() {
   return {
     version: 1,
     words: [],
-    stats: { xp: 0, streak: 0, lastDay: null, day: null, dayXp: 0, sessions: 0 },
-    settings: { name: '', dailyGoal: 50, accent: 'en-GB', sounds: true, autoSpeak: true, hideInstallTip: false },
+    stats: { xp: 0, streak: 0, lastDay: null, day: null, dayXp: 0, sessions: 0, bestCombo: 0, scans: 0 },
+    settings: {
+      name: DEFAULT_NAME, dailyGoal: 50, accent: 'en-GB', sounds: true, beat: true, beatVolume: 0.6,
+      autoSpeak: true, hideInstallTip: false,
+    },
+    badges: {},
   };
 }
 
@@ -90,6 +124,7 @@ function load() {
         ...d, ...s,
         stats: { ...d.stats, ...s.stats },
         settings: { ...d.settings, ...s.settings },
+        badges: { ...s.badges },
         words: Array.isArray(s.words) ? s.words : [],
       };
     }
@@ -129,6 +164,20 @@ function lastUnit() {
 function dayXp() {
   return state.stats.day === todayKey() ? state.stats.dayXp : 0;
 }
+function rankFor(xp) {
+  let i = 0;
+  while (i + 1 < RANKS.length && xp >= RANKS[i + 1].xp) i++;
+  return { ...RANKS[i], index: i, next: RANKS[i + 1] || null };
+}
+
+// Prüft alle Trophäen und gibt die neu freigeschalteten zurück.
+function unlockBadges(result) {
+  const fresh = BADGES.filter(b => !state.badges[b.id] && b.check(state, result));
+  fresh.forEach(b => { state.badges[b.id] = todayKey(); });
+  if (fresh.length) save();
+  return fresh;
+}
+
 function currentStreak() {
   const s = state.stats;
   return s.lastDay === todayKey() || s.lastDay === yesterdayKey() ? s.streak : 0;
@@ -162,28 +211,16 @@ function speak(text, slow = false) {
     voices.find(v => v.lang.startsWith('en'));
   if (voice) u.voice = voice;
   u.rate = slow ? 0.55 : 0.9;
+  Beat.duck(true);
+  u.onend = u.onerror = () => Beat.duck(false);
   speechSynthesis.speak(u);
 }
 
-let audioCtx;
 function beep(ok) {
   if (!state.settings.sounds) return;
   try {
-    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    const notes = ok ? [660, 990] : [260, 200];
-    notes.forEach((freq, i) => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = ok ? 'sine' : 'triangle';
-      osc.frequency.value = freq;
-      const t = audioCtx.currentTime + i * 0.12;
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(0.2, t + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
-      osc.connect(gain).connect(audioCtx.destination);
-      osc.start(t);
-      osc.stop(t + 0.22);
-    });
+    if (ok) Beat.sfxCorrect();
+    else Beat.sfxWrong();
   } catch (e) { /* kein Ton möglich */ }
 }
 
@@ -196,6 +233,7 @@ function show(tab) {
   if (lesson) return;
   currentTab = tab;
   document.body.classList.remove('in-lesson');
+  stopBeat();
   document.querySelectorAll('#tabbar button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   VIEWS[tab]();
   window.scrollTo(0, 0);
@@ -230,6 +268,13 @@ function unitStats(unit) {
   return { count: ws.length, safe, due: ws.filter(isDue).length, fresh: ws.filter(w => w.box === 0).length, progress };
 }
 
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 11) return 'Guten Morgen';
+  if (h >= 18) return 'Na';
+  return 'Yo';
+}
+
 function renderHome() {
   const s = state.stats;
   const goal = state.settings.dailyGoal;
@@ -237,15 +282,27 @@ function renderHome() {
   const due = state.words.filter(isDue).length;
   const fresh = state.words.filter(w => w.box === 0).length;
   const standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
-  const name = state.settings.name ? `, ${esc(state.settings.name)}` : '';
+  const name = state.settings.name ? ` ${esc(state.settings.name)}` : '';
   const units = unitList();
+  const rank = rankFor(s.xp);
+  const rankPct = rank.next ? (s.xp - rank.xp) / (rank.next.xp - rank.xp) * 100 : 100;
+  const badgeCount = Object.keys(state.badges).length;
 
   view.innerHTML = `
-    <h1 class="hello">Hallo${name}! 👋</h1>
+    <h1 class="hello">${greeting()}${name}! <span class="wave">🎧</span></h1>
+    <div class="card rank-card">
+      <div class="vinyl"><span>${rank.icon}</span></div>
+      <div class="rank-info">
+        <small>Dein DJ-Rang</small>
+        <div class="rank-name">${rank.name}</div>
+        <div class="progress small"><div class="progress-fill alt" style="width:${Math.min(100, rankPct)}%"></div></div>
+        <small>${rank.next ? `Noch ${rank.next.xp - s.xp} XP bis <b>${rank.next.name}</b>` : 'Höchster Rang erreicht! 👑'}</small>
+      </div>
+    </div>
     <div class="stat-row">
       <div class="stat"><span class="stat-icon">🔥</span><b>${currentStreak()}</b><small>Tage</small></div>
-      <div class="stat"><span class="stat-icon">⭐</span><b>${s.xp}</b><small>XP</small></div>
-      <div class="stat"><span class="stat-icon">📚</span><b>${state.words.length}</b><small>Wörter</small></div>
+      <div class="stat"><span class="stat-icon">⚡</span><b>${s.xp}</b><small>XP</small></div>
+      <button class="stat" data-action="goto" data-tab="settings"><span class="stat-icon">🏆</span><b>${badgeCount}/${BADGES.length}</b><small>Trophäen</small></button>
     </div>
     <div class="card goal">
       <div class="goal-head"><span>🎯 Tagesziel</span><span>${Math.min(today, goal)} / ${goal} XP</span></div>
@@ -254,7 +311,7 @@ function renderHome() {
     </div>
     ${state.words.length >= 4 ? `
       <button class="btn big start-btn" data-action="start" data-unit="">
-        Jetzt lernen
+        <span>▶ Track starten</span>
         <small>${due ? `${due} zum Wiederholen` : 'Nichts fällig'} · ${fresh} neu</small>
       </button>` : `
       <div class="card empty">
@@ -267,15 +324,18 @@ function renderHome() {
         <b>📲 Als App installieren</b>
         <p>In Safari unten auf <b>Teilen</b> <span class="share-icon">⬆︎</span> tippen und <b>„Zum Home-Bildschirm“</b> wählen. Dann startet der Trainer wie eine richtige App – auch ohne Internet.</p>
       </div>` : ''}
-    ${units.length ? `<h2 class="section-title">Lektionen</h2>` : ''}
+    ${units.length ? `<h2 class="section-title">Deine Units</h2>` : ''}
     <div class="units">
       ${units.map(u => {
         const st = unitStats(u);
         return `
-        <button class="card unit" data-action="start" data-unit="${esc(u)}" ${st.count < 1 ? 'disabled' : ''}>
-          <div class="unit-name">${esc(u)}</div>
-          <div class="unit-meta">${st.count} Wörter · ${st.safe} sicher${st.due ? ` · <span class="due">${st.due} fällig</span>` : ''}</div>
-          <div class="progress small"><div class="progress-fill" style="width:${Math.round(st.progress * 100)}%"></div></div>
+        <button class="card unit" data-action="start" data-unit="${esc(u)}">
+          <div class="unit-disc">💿</div>
+          <div class="unit-body">
+            <div class="unit-name">${esc(u)}</div>
+            <div class="unit-meta">${st.count} Wörter · ${st.safe} sicher${st.due ? ` · <span class="due">${st.due} fällig</span>` : ''}</div>
+            <div class="progress small"><div class="progress-fill" style="width:${Math.round(st.progress * 100)}%"></div></div>
+          </div>
         </button>`;
       }).join('')}
     </div>`;
@@ -346,9 +406,17 @@ function startLesson(unit) {
   }
   lesson = {
     unit, queue: items, total: items.length, done: 0, xp: 0, combo: 0,
-    graded: new Set(), correctFirst: 0, missed: new Set(), current: null, locked: false, lastOk: true,
+    graded: new Set(), correctFirst: 0, missed: new Set(), current: null, locked: false, lastOk: true, maxCombo: 0,
   };
   document.body.classList.add('in-lesson');
+  if (state.settings.beat) {
+    try {
+      Beat.setVolume(state.settings.beatVolume);
+      Beat.setLevel(comboLevel());
+      Beat.start();
+      document.body.classList.add('beat-on');
+    } catch (e) { /* ohne Beat weiter */ }
+  }
   renderStep();
 }
 
@@ -359,11 +427,43 @@ function lessonShell(inner, footer = '') {
       <header class="lesson-top">
         <button class="icon-btn" data-action="quit-lesson" aria-label="Lektion beenden">✕</button>
         <div class="progress"><div class="progress-fill" id="lesson-progress" style="width:${pct}%"></div></div>
-        <span class="combo" id="combo">${lesson.combo >= 3 ? `🔥 ${lesson.combo}` : ''}</span>
+        <div class="mixer" id="mixer" aria-label="Beat-Level">${mixerHtml()}</div>
       </header>
       <section class="exercise">${inner}</section>
       <footer class="lesson-foot" id="lesson-foot">${footer}</footer>
     </div>`;
+}
+
+// Der Beat wird mit jeder zweiten richtigen Antwort in Folge voller: Kick → Hats → Bass → Clap → Drop
+function comboLevel() {
+  return Math.min(Beat.MAX_LEVEL, 1 + Math.floor(lesson.combo / 2));
+}
+
+function mixerHtml() {
+  const lvl = comboLevel();
+  const bars = Array.from({ length: Beat.MAX_LEVEL + 1 }, (_, i) => `<i class="${i <= lvl ? 'on' : ''}"></i>`).join('');
+  const label = lvl === Beat.MAX_LEVEL ? 'DROP' : lesson.combo >= 2 ? `🔥${lesson.combo}` : '';
+  return `<span class="eq">${bars}</span><span class="combo ${lvl === Beat.MAX_LEVEL ? 'drop' : ''}">${label}</span>`;
+}
+
+function flash(text) {
+  const el = document.createElement('div');
+  el.className = 'flash';
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1300);
+}
+
+function comboUp() {
+  const before = comboLevel();
+  lesson.combo++;
+  lesson.maxCombo = Math.max(lesson.maxCombo, lesson.combo);
+  if (before < Beat.MAX_LEVEL && comboLevel() === Beat.MAX_LEVEL) flash(pick(DROP_MSG));
+}
+
+function stopBeat() {
+  Beat.stop();
+  document.body.classList.remove('beat-on');
 }
 
 function renderStep() {
@@ -528,7 +628,7 @@ function answer(result) {
   lesson.lastOk = ok;
   beep(ok);
   if (ok) {
-    lesson.combo++;
+    comboUp();
     lesson.done++;
     lesson.xp += XP_CORRECT;
   } else {
@@ -542,7 +642,7 @@ function answer(result) {
   else body = `<p class="pair">${esc(w.en)} = ${esc(w.de)}</p>`;
   $('#lesson-foot').innerHTML = `
     <div class="feedback ${ok ? 'good' : 'bad'}">
-      <div class="fb-head">${ok ? (result === 'typo' ? 'Fast richtig! 👍' : pick(PRAISE)) : 'Nicht ganz 😕'}</div>
+      <div class="fb-head">${ok ? (result === 'typo' ? 'Fast richtig! 👍' : pick(PRAISE)) : pick(WRONG_MSG)}</div>
       ${body}
       <button class="btn big ${ok ? '' : 'red'}" data-action="next">Weiter</button>
     </div>`;
@@ -552,8 +652,9 @@ function answer(result) {
 function updateLessonTop() {
   const bar = $('#lesson-progress');
   if (bar) bar.style.width = `${Math.round(lesson.done / lesson.total * 100)}%`;
-  const combo = $('#combo');
-  if (combo) combo.textContent = lesson.combo >= 3 ? `🔥 ${lesson.combo}` : '';
+  const mixer = $('#mixer');
+  if (mixer) mixer.innerHTML = mixerHtml();
+  Beat.setLevel(comboLevel());
 }
 
 ACTIONS.next = () => {
@@ -565,6 +666,7 @@ ACTIONS.next = () => {
 ACTIONS['quit-lesson'] = () => {
   if (!confirm('Lektion wirklich beenden? Was du schon gelernt hast, bleibt gespeichert.')) return;
   lesson = null;
+  stopBeat();
   if (canSpeak()) speechSynthesis.cancel();
   show('home');
 };
@@ -614,6 +716,7 @@ ACTIONS['match-pick'] = el => {
       beep(true);
       lesson.locked = true;
       lesson.lastOk = true;
+      comboUp();
       lesson.done++;
       lesson.xp += XP_CORRECT;
       updateLessonTop();
@@ -631,6 +734,7 @@ ACTIONS['match-pick'] = el => {
 };
 
 function finishLesson() {
+  stopBeat();
   const graded = lesson.graded.size;
   const accuracy = graded ? Math.round(lesson.correctFirst / graded * 100) : 100;
   const perfect = lesson.missed.size === 0;
@@ -640,27 +744,43 @@ function finishLesson() {
   if (s.day !== today) { s.day = today; s.dayXp = 0; }
   const goal = state.settings.dailyGoal;
   const goalReachedNow = s.dayXp < goal && s.dayXp + xp >= goal;
+  const rankBefore = rankFor(s.xp);
   s.dayXp += xp;
   s.xp += xp;
   s.sessions++;
+  s.bestCombo = Math.max(s.bestCombo || 0, lesson.maxCombo);
   if (s.lastDay !== today) {
     s.streak = s.lastDay === yesterdayKey() ? s.streak + 1 : 1;
     s.lastDay = today;
   }
   save();
+  const rankAfter = rankFor(s.xp);
+  const newBadges = unlockBadges({ perfect, maxCombo: lesson.maxCombo });
   const missed = [...lesson.missed].map(wordById).filter(Boolean);
+  const maxCombo = lesson.maxCombo;
   lesson = null;
 
   view.innerHTML = `
     <div class="result">
-      <div class="result-emoji">${perfect ? '🏆' : accuracy >= 70 ? '🎉' : '💪'}</div>
-      <h1>${perfect ? 'Fehlerfrei!' : 'Lektion geschafft!'}</h1>
+      <div class="result-emoji">${perfect ? '🏆' : accuracy >= 70 ? '🎧' : '💪'}</div>
+      <h1>${perfect ? 'Fehlerfreier Mix!' : 'Track fertig!'}</h1>
+      ${rankAfter.index > rankBefore.index ? `
+        <div class="card levelup">
+          <div class="levelup-icon">${rankAfter.icon}</div>
+          <b>Level up!</b> Du bist jetzt <b>${rankAfter.name}</b>
+        </div>` : ''}
       ${goalReachedNow ? '<p class="goal-done">🎯 Tagesziel erreicht!</p>' : ''}
       <div class="stat-row">
         <div class="stat xp"><small>XP</small><b>+${xp}</b></div>
         <div class="stat acc"><small>Treffer</small><b>${accuracy}%</b></div>
+        <div class="stat combo-stat"><small>Combo</small><b>⚡ ${maxCombo}</b></div>
         <div class="stat streak"><small>Serie</small><b>🔥 ${s.streak}</b></div>
       </div>
+      ${newBadges.map(b => `
+        <div class="card badge-new">
+          <span class="badge-icon">${b.icon}</span>
+          <span><small>Neue Trophäe!</small><b>${b.name}</b><br><span class="muted">${b.desc}</span></span>
+        </div>`).join('')}
       ${missed.length ? `
         <div class="card">
           <h2>Diese Wörter üben wir nochmal:</h2>
@@ -668,13 +788,13 @@ function finishLesson() {
         </div>` : ''}
       <button class="btn big" data-action="finish">Weiter</button>
     </div>`;
-  if (perfect || goalReachedNow) confetti();
+  if (perfect || goalReachedNow || newBadges.length || rankAfter.index > rankBefore.index) confetti();
 }
 
 ACTIONS.finish = () => show('home');
 
 function confetti() {
-  const colors = ['#58cc02', '#1cb0f6', '#ffc800', '#ff4b4b', '#ce82ff'];
+  const colors = ['#ff2bd6', '#00e5ff', '#b6ff3b', '#ffd400', '#8b5cff'];
   const box = document.createElement('div');
   box.className = 'confetti';
   for (let i = 0; i < 60; i++) {
@@ -963,7 +1083,10 @@ ACTIONS['scan-save'] = () => {
     state.words.push(newWord(p.en, p.de, unit));
     added++;
   }
+  if (added) state.stats.scans = (state.stats.scans || 0) + 1;
   save();
+  const newBadges = unlockBadges();
+  if (newBadges.length) setTimeout(() => toast(`🏆 Neue Trophäe: ${newBadges.map(b => b.name).join(', ')}`), 2800);
   const rest = scanPairs().filter(p => !p.en || !p.de);
   draft.en = rest.map(p => p.en).join('\n');
   draft.de = rest.map(p => p.de).join('\n');
@@ -1123,9 +1246,23 @@ function renderSettings() {
       <label>Aussprache
         <select id="set-accent">${opt('en-GB', st.accent, '🇬🇧 Britisch')}${opt('en-US', st.accent, '🇺🇸 Amerikanisch')}</select>
       </label>
-      <label class="switch"><input type="checkbox" id="set-sounds" ${st.sounds ? 'checked' : ''}> Töne bei richtig/falsch</label>
+      <label class="switch"><input type="checkbox" id="set-beat" ${st.beat ? 'checked' : ''}> 🎧 Tech-House-Beat beim Lernen</label>
+      <label>Beat-Lautstärke<input type="range" id="set-volume" min="0.1" max="1" step="0.1" value="${st.beatVolume}"></label>
+      <label class="switch"><input type="checkbox" id="set-sounds" ${st.sounds ? 'checked' : ''}> Soundeffekte bei richtig/falsch</label>
       <label class="switch"><input type="checkbox" id="set-speak" ${st.autoSpeak ? 'checked' : ''}> Englische Wörter automatisch vorlesen</label>
       <button class="btn ghost" data-action="test-voice">🔊 Stimme testen</button>
+    </div>
+
+    <div class="card">
+      <h2>🏆 Trophäen <small class="muted">${Object.keys(state.badges).length} von ${BADGES.length}</small></h2>
+      <div class="badge-grid">
+        ${BADGES.map(b => `
+          <div class="badge-tile ${state.badges[b.id] ? 'got' : ''}">
+            <span class="badge-icon">${state.badges[b.id] ? b.icon : '🔒'}</span>
+            <b>${b.name}</b>
+            <small>${b.desc}</small>
+          </div>`).join('')}
+      </div>
     </div>
 
     <div class="card">
@@ -1135,6 +1272,8 @@ function renderSettings() {
         <li><span>Davon sicher</span><b>${safe}</b></li>
         <li><span>Lektionen gelernt</span><b>${state.stats.sessions}</b></li>
         <li><span>XP gesamt</span><b>${state.stats.xp}</b></li>
+        <li><span>DJ-Rang</span><b>${rankFor(state.stats.xp).icon} ${rankFor(state.stats.xp).name}</b></li>
+        <li><span>Beste Combo</span><b>⚡ ${state.stats.bestCombo || 0}</b></li>
         <li><span>Serie</span><b>🔥 ${currentStreak()} Tage</b></li>
       </ul>
     </div>
@@ -1155,13 +1294,15 @@ function renderSettings() {
       <button class="btn ghost" data-action="reset-progress">Lernfortschritt zurücksetzen</button>
       <button class="btn red" data-action="delete-all">Alles löschen</button>
     </div>
-    <p class="muted center small">Vokabeltrainer · alle Daten bleiben auf deinem Gerät</p>`;
+    <p class="muted center small">Vocab Beats 🎧 · alle Daten bleiben auf deinem Gerät</p>`;
 
   const bind = (id, fn) => $(id).addEventListener('change', e => { fn(e.target); save(); });
   bind('#set-name', el => { st.name = el.value.trim(); });
   bind('#set-goal', el => { st.dailyGoal = Number(el.value); });
   bind('#set-accent', el => { st.accent = el.value; speak('Hello! How are you?'); });
   bind('#set-sounds', el => { st.sounds = el.checked; if (el.checked) beep(true); });
+  bind('#set-beat', el => { st.beat = el.checked; });
+  bind('#set-volume', el => { st.beatVolume = Number(el.value); Beat.setVolume(st.beatVolume); beep(true); });
   bind('#set-speak', el => { st.autoSpeak = el.checked; });
   $('#import-file').addEventListener('change', e => {
     const file = e.target.files && e.target.files[0];
@@ -1248,6 +1389,7 @@ ACTIONS['reset-progress'] = () => {
   if (!confirm('Lernfortschritt aller Wörter, XP und Serie zurücksetzen? Die Vokabeln bleiben erhalten.')) return;
   state.words.forEach(w => Object.assign(w, { box: 0, due: 0, right: 0, wrong: 0 }));
   state.stats = defaultState().stats;
+  state.badges = {};
   save();
   renderSettings();
 };
