@@ -11,7 +11,14 @@ Home-Bildschirm legen. Danach funktioniert sie auch **ohne Internet**. Alle Date
 - **Lernen wie bei Duolingo**: kurze Lektionen („Tracks“) mit 10 Wörtern, Fortschrittsbalken, XP, Tagesziel,
   🔥-Serie (Tage in Folge), Konfetti 🎉
 - **Tech-House-Beat** (124 BPM), live im Browser erzeugt – ohne Audiodateien. Lautstärke einstellbar, abschaltbar.
-- **DJ-Ränge** von „Bedroom-DJ“ bis „DJ-Legende“ und **12 Trophäen** (Combos, Serien, gesammelte Wörter …)
+- **Ziele fürs ganze Schuljahr** (Tab „Erfolge“):
+  - **Schallplatten pro Unit**: 🥉 Bronze (jedes Wort einmal richtig) → 🥈 Silber → 🥇 Gold (alle Wörter sicher)
+    → 💎 Platin (alle auf höchster Stufe, dauert durch die Wiederholungsabstände ca. zwei Monate)
+  - **14 Erfolgs-Serien mit 79 Stufen**, z. B. Lernserie 3 → 200 Tage, Plattensammlung 25 → 1000 Vokabeln,
+    fehlerfreie Tracks 1 → 100, Combo-König, Tipp-Profi, Fehlerjäger …
+  - **8 Spezial-Erfolge** wie Frühaufsteher, Nachteule, Comeback, Allrounder, Marathon
+  - **Wochen-Challenge**, die jede Woche wechselt (z. B. „Lerne an 5 verschiedenen Tagen“, „Sammle 600 XP“)
+  - **12 DJ-Ränge** von „Bedroom-DJ“ bis „DJ-Legende“ (18.000 XP ≈ ein Schuljahr mit 1–2 Tracks pro Tag)
 - **Zemi** 💃, ein Manga-DJ-Girl, tanzt beim Drop, bei großen Combos und am Ende jedes Tracks mit einer
   Punktetafel über den Bildschirm (unter „Mehr“ abschaltbar)
 - Club-Design in Neonfarben
@@ -91,6 +98,7 @@ Reines HTML/CSS/JavaScript ohne Build-Schritt:
 | `js/answers.js` | Antwortprüfung und Zerlegen des erkannten Textes |
 | `js/beat.js` | Beat-Engine (Web Audio) und Soundeffekte |
 | `js/zemi.js` | Zemi, die Figur mit der Punktetafel (SVG) |
+| `js/goals.js` | Ziele: Unit-Schallplatten, Erfolgs-Serien, Spezial-Erfolge, Wochen-Challenge |
 | `css/style.css` | Design |
 | `sw.js` | Service Worker für den Offline-Betrieb |
 | `manifest.webmanifest`, `icons/` | App-Name und -Icons für den Home-Bildschirm |

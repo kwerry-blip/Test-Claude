@@ -29,32 +29,22 @@ const PRAISE = ['Fett! 🔥', 'Banger! 💥', 'Voll im Takt! 🎶', 'Sauber! ✨
 const WRONG_MSG = ['Knapp daneben! 🎧', 'Aus dem Takt 😅', 'Nicht ganz – weiter geht’s!'];
 const DROP_MSG = ['DROP! 🔊', 'Bass rein! 🔊', 'Crowd geht ab! 🙌'];
 
-// DJ-Ränge nach gesammelten XP
+// DJ-Ränge nach gesammelten XP – ausgelegt auf ein ganzes Schuljahr (ca. 1–2 Tracks pro Tag)
 const RANKS = [
   { xp: 0, name: 'Bedroom-DJ', icon: '🎧' },
   { xp: 100, name: 'Party-DJ', icon: '🪩' },
-  { xp: 300, name: 'Warm-up-DJ', icon: '🎚️' },
-  { xp: 700, name: 'Resident-DJ', icon: '🎛️' },
-  { xp: 1500, name: 'Club-Headliner', icon: '💿' },
-  { xp: 3000, name: 'Festival-Headliner', icon: '🎪' },
-  { xp: 6000, name: 'DJ-Legende', icon: '👑' },
+  { xp: 300, name: 'Schuldisco-DJ', icon: '🏫' },
+  { xp: 600, name: 'Warm-up-DJ', icon: '🎚️' },
+  { xp: 1000, name: 'Club-DJ', icon: '🎛️' },
+  { xp: 1600, name: 'Resident-DJ', icon: '💿' },
+  { xp: 2500, name: 'Radio-DJ', icon: '📻' },
+  { xp: 4000, name: 'Club-Headliner', icon: '🌃' },
+  { xp: 6000, name: 'Festival-DJ', icon: '🎪' },
+  { xp: 9000, name: 'Festival-Headliner', icon: '🎆' },
+  { xp: 13000, name: 'Welttournee', icon: '🌍' },
+  { xp: 18000, name: 'DJ-Legende', icon: '👑' },
 ];
 
-// Trophäen: check bekommt den Zustand und (falls vorhanden) das Ergebnis der letzten Lektion
-const BADGES = [
-  { id: 'first', icon: '🎵', name: 'Erster Track', desc: 'Die erste Lektion geschafft', check: s => s.stats.sessions >= 1 },
-  { id: 'perfect', icon: '💎', name: 'Fehlerfreier Mix', desc: 'Eine Lektion ohne Fehler', check: (s, r) => r && r.perfect },
-  { id: 'drop', icon: '🔊', name: 'Drop-Master', desc: 'Den Drop erreicht (6 richtig in Folge)', check: (s, r) => r && r.maxCombo >= 6 },
-  { id: 'combo15', icon: '⚡', name: 'Endlos-Groove', desc: '15 richtig in Folge', check: (s, r) => r && r.maxCombo >= 15 },
-  { id: 'streak3', icon: '🔥', name: '3-Tage-Groove', desc: '3 Tage in Folge gelernt', check: s => s.stats.streak >= 3 },
-  { id: 'streak7', icon: '📅', name: 'Wochen-Rave', desc: '7 Tage in Folge gelernt', check: s => s.stats.streak >= 7 },
-  { id: 'streak30', icon: '🏆', name: 'Monats-Marathon', desc: '30 Tage in Folge gelernt', check: s => s.stats.streak >= 30 },
-  { id: 'scan', icon: '📷', name: 'Scanner', desc: 'Vokabeln per Foto erfasst', check: s => s.stats.scans >= 1 },
-  { id: 'words50', icon: '📦', name: 'Crate Digger', desc: '50 Vokabeln gesammelt', check: s => s.words.length >= 50 },
-  { id: 'words200', icon: '🗄️', name: 'Plattensammler', desc: '200 Vokabeln gesammelt', check: s => s.words.length >= 200 },
-  { id: 'safe25', icon: '🧠', name: 'Gedächtnis-Booster', desc: '25 Wörter sicher gelernt', check: s => s.words.filter(w => w.box >= SAFE_BOX).length >= 25 },
-  { id: 'safe100', icon: '🚀', name: 'Vokabel-Rakete', desc: '100 Wörter sicher gelernt', check: s => s.words.filter(w => w.box >= SAFE_BOX).length >= 100 },
-];
 
 /* ---------- Hilfsfunktionen ---------- */
 
@@ -100,12 +90,17 @@ function defaultState() {
   return {
     version: 1,
     words: [],
-    stats: { xp: 0, streak: 0, lastDay: null, day: null, dayXp: 0, sessions: 0, bestCombo: 0, scans: 0 },
+    stats: {
+      xp: 0, streak: 0, bestStreak: 0, lastDay: null, day: null, dayXp: 0, dayTracks: 0, sessions: 0, bestCombo: 0,
+      scans: 0, perfect: 0, goalDays: 0, typed: 0, listened: 0, matches: 0, fixed: 0, weeklyDone: 0, learnedDays: [],
+    },
     settings: {
       name: DEFAULT_NAME, dailyGoal: 50, accent: 'en-GB', sounds: true, beat: true, beatVolume: 0.6, zemi: true,
       autoSpeak: true, hideInstallTip: false,
     },
     badges: {},
+    unitPlates: {},
+    week: null,
   };
 }
 
@@ -127,6 +122,7 @@ function load() {
         stats: { ...d.stats, ...s.stats },
         settings: { ...d.settings, ...s.settings },
         badges: { ...s.badges },
+        unitPlates: { ...s.unitPlates },
         words: Array.isArray(s.words) ? s.words : [],
       };
     }
@@ -139,6 +135,7 @@ function load() {
 }
 
 let state = load();
+migrateGoals();
 
 function save() {
   try {
@@ -170,14 +167,6 @@ function rankFor(xp) {
   let i = 0;
   while (i + 1 < RANKS.length && xp >= RANKS[i + 1].xp) i++;
   return { ...RANKS[i], index: i, next: RANKS[i + 1] || null };
-}
-
-// Prüft alle Trophäen und gibt die neu freigeschalteten zurück.
-function unlockBadges(result) {
-  const fresh = BADGES.filter(b => !state.badges[b.id] && b.check(state, result));
-  fresh.forEach(b => { state.badges[b.id] = todayKey(); });
-  if (fresh.length) save();
-  return fresh;
 }
 
 function currentStreak() {
@@ -229,7 +218,7 @@ function beep(ok) {
 /* ---------- Navigation ---------- */
 
 let currentTab = 'home';
-const VIEWS = { home: renderHome, words: renderWords, scan: renderScan, settings: renderSettings };
+const VIEWS = { home: renderHome, words: renderWords, scan: renderScan, goals: renderGoals, settings: renderSettings };
 
 function show(tab) {
   if (lesson) return;
@@ -288,7 +277,7 @@ function renderHome() {
   const units = unitList();
   const rank = rankFor(s.xp);
   const rankPct = rank.next ? (s.xp - rank.xp) / (rank.next.xp - rank.xp) * 100 : 100;
-  const badgeCount = Object.keys(state.badges).length;
+  const goals = achievementCount();
 
   view.innerHTML = `
     <h1 class="hello">${greeting()}${name}! <span class="wave">🎧</span></h1>
@@ -304,13 +293,14 @@ function renderHome() {
     <div class="stat-row">
       <div class="stat"><span class="stat-icon">🔥</span><b>${currentStreak()}</b><small>Tage</small></div>
       <div class="stat"><span class="stat-icon">⚡</span><b>${s.xp}</b><small>XP</small></div>
-      <button class="stat" data-action="goto" data-tab="settings"><span class="stat-icon">🏆</span><b>${badgeCount}/${BADGES.length}</b><small>Trophäen</small></button>
+      <button class="stat" data-action="goto" data-tab="goals"><span class="stat-icon">🏆</span><b>${goals.done}/${goals.total}</b><small>Erfolge</small></button>
     </div>
     <div class="card goal">
       <div class="goal-head"><span>🎯 Tagesziel</span><span>${Math.min(today, goal)} / ${goal} XP</span></div>
       <div class="progress"><div class="progress-fill ${today >= goal ? 'gold' : ''}" style="width:${Math.min(100, today / goal * 100)}%"></div></div>
       ${today >= goal ? '<p class="goal-done">Tagesziel geschafft! 🏆</p>' : ''}
     </div>
+    ${weeklyCardHtml()}
     ${state.words.length >= 4 ? `
       <button class="btn big start-btn" data-action="start" data-unit="">
         <span>▶ Track starten</span>
@@ -334,7 +324,7 @@ function renderHome() {
         <button class="card unit" data-action="start" data-unit="${esc(u)}">
           <div class="unit-disc">💿</div>
           <div class="unit-body">
-            <div class="unit-name">${esc(u)}</div>
+            <div class="unit-name">${esc(u)} ${platesHtml(u)}</div>
             <div class="unit-meta">${st.count} Wörter · ${st.safe} sicher${st.due ? ` · <span class="due">${st.due} fällig</span>` : ''}</div>
             <div class="progress small"><div class="progress-fill" style="width:${Math.round(st.progress * 100)}%"></div></div>
           </div>
@@ -408,7 +398,7 @@ function startLesson(unit) {
   }
   lesson = {
     unit, queue: items, total: items.length, done: 0, xp: 0, combo: 0,
-    graded: new Set(), correctFirst: 0, missed: new Set(), current: null, locked: false, lastOk: true, maxCombo: 0,
+    graded: new Set(), correctFirst: 0, missed: new Set(), current: null, locked: false, lastOk: true, maxCombo: 0, families: new Set(),
   };
   document.body.classList.add('in-lesson');
   if (state.settings.beat) {
@@ -616,6 +606,8 @@ function grade(w, ok) {
   lesson.graded.add(w.id);
   if (ok) {
     lesson.correctFirst++;
+    if (!w.right) currentWeek().newWords++;
+    if (w.wrong) state.stats.fixed = (state.stats.fixed || 0) + 1;
     w.right++;
     w.box = Math.min(MAX_BOX, w.box + 1);
     w.due = startOfToday() + INTERVAL_DAYS[w.box] * DAY;
@@ -634,10 +626,16 @@ function answer(result) {
   grade(w, ok);
   lesson.lastOk = ok;
   beep(ok);
+  lesson.families.add(item.type.split('_')[0]);
   if (ok) {
     comboUp();
     lesson.done++;
     lesson.xp += XP_CORRECT;
+    if (item.type.startsWith('type') || item.type === 'listen_type') {
+      state.stats.typed = (state.stats.typed || 0) + 1;
+      currentWeek().typed++;
+    }
+    if (item.type.startsWith('listen')) state.stats.listened = (state.stats.listened || 0) + 1;
   } else {
     lesson.combo = 0;
     lesson.missed.add(w.id);
@@ -726,6 +724,8 @@ ACTIONS['match-pick'] = el => {
       comboUp();
       lesson.done++;
       lesson.xp += XP_CORRECT;
+      lesson.families.add('match');
+      state.stats.matches = (state.stats.matches || 0) + 1;
       updateLessonTop();
       $('#lesson-foot').innerHTML = `
         <div class="feedback good">
@@ -748,21 +748,43 @@ function finishLesson() {
   const xp = lesson.xp + (perfect ? XP_PERFECT_BONUS : 0);
   const s = state.stats;
   const today = todayKey();
-  if (s.day !== today) { s.day = today; s.dayXp = 0; }
+  if (s.day !== today) { s.day = today; s.dayXp = 0; s.dayTracks = 0; }
   const goal = state.settings.dailyGoal;
   const goalReachedNow = s.dayXp < goal && s.dayXp + xp >= goal;
   const rankBefore = rankFor(s.xp);
   s.dayXp += xp;
   s.xp += xp;
   s.sessions++;
+  s.dayTracks = (s.dayTracks || 0) + 1;
   s.bestCombo = Math.max(s.bestCombo || 0, lesson.maxCombo);
+  if (perfect) s.perfect = (s.perfect || 0) + 1;
+  if (goalReachedNow) s.goalDays = (s.goalDays || 0) + 1;
+  const gapDays = s.lastDay ? Math.round((new Date(today) - new Date(s.lastDay)) / DAY) : 0;
   if (s.lastDay !== today) {
     s.streak = s.lastDay === yesterdayKey() ? s.streak + 1 : 1;
     s.lastDay = today;
   }
+  s.bestStreak = Math.max(s.bestStreak || 0, s.streak);
+  s.learnedDays = [...new Set([...(s.learnedDays || []), today])].slice(-400);
+  // Wochen-Challenge
+  const week = currentWeek();
+  week.xp += xp;
+  week.tracks++;
+  if (perfect) week.perfect++;
+  if (goalReachedNow) week.goalDays++;
+  week.bestCombo = Math.max(week.bestCombo, lesson.maxCombo);
+  if (!week.days.includes(today)) week.days.push(today);
   save();
+  const weeklyNow = checkWeekly();
   const rankAfter = rankFor(s.xp);
-  const newBadges = unlockBadges({ perfect, maxCombo: lesson.maxCombo });
+  const now = new Date();
+  const newPlates = checkUnitPlates();
+  const newBadges = unlockBadges({
+    minutes: now.getHours() * 60 + now.getMinutes(),
+    weekend: now.getDay() === 0 && s.learnedDays.includes(yesterdayKey()),
+    gapDays,
+    families: lesson.families.size,
+  });
   const missed = [...lesson.missed].map(wordById).filter(Boolean);
   const maxCombo = lesson.maxCombo;
   lesson = null;
@@ -783,11 +805,22 @@ function finishLesson() {
         <div class="stat combo-stat"><small>Combo</small><b>⚡ ${maxCombo}</b></div>
         <div class="stat streak"><small>Serie</small><b>🔥 ${s.streak}</b></div>
       </div>
-      ${newBadges.map(b => `
+      ${newPlates.map(({ unit, plate }) => `
+        <div class="card badge-new plate-new">
+          <span class="badge-icon">${plate.icon}</span>
+          <span><small>${plate.name}-Schallplatte!</small><b>${esc(unit)}</b><br><span class="muted">${plate.desc}</span></span>
+        </div>`).join('')}
+      ${weeklyNow ? `
+        <div class="card badge-new">
+          <span class="badge-icon">🗓️</span>
+          <span><small>Wochen-Challenge geschafft!</small><b>${esc(weeklyStatus().c.text)}</b></span>
+        </div>` : ''}
+      ${newBadges.slice(0, 3).map(b => `
         <div class="card badge-new">
           <span class="badge-icon">${b.icon}</span>
-          <span><small>Neue Trophäe!</small><b>${b.name}</b><br><span class="muted">${b.desc}</span></span>
+          <span><small>Neuer Erfolg!</small><b>${b.name}</b><br><span class="muted">${b.desc}</span></span>
         </div>`).join('')}
+      ${newBadges.length > 3 ? `<p class="muted center">… und ${newBadges.length - 3} weitere Erfolge 🏆</p>` : ''}
       ${missed.length ? `
         <div class="card">
           <h2>Diese Wörter üben wir nochmal:</h2>
@@ -795,9 +828,12 @@ function finishLesson() {
         </div>` : ''}
       <button class="btn big" data-action="finish">Weiter</button>
     </div>`;
-  if (perfect || goalReachedNow || newBadges.length || rankAfter.index > rankBefore.index) confetti();
+  if (perfect || goalReachedNow || newBadges.length || newPlates.length || weeklyNow || rankAfter.index > rankBefore.index) confetti();
+  const topPlate = newPlates[newPlates.length - 1];
   setTimeout(() => {
-    if (rankAfter.index > rankBefore.index) showZemi('LEVEL UP!', `${rankAfter.icon} ${rankAfter.name}`);
+    if (topPlate) showZemi(`${topPlate.plate.name.toUpperCase()}! ${topPlate.plate.icon}`, topPlate.unit);
+    else if (rankAfter.index > rankBefore.index) showZemi('LEVEL UP!', `${rankAfter.icon} ${rankAfter.name}`);
+    else if (weeklyNow) showZemi('CHALLENGE ✓', 'Wochenziel geschafft!');
     else if (perfect) showZemi(`+${xp} XP`, '💎 Fehlerfrei!');
     else showZemi(`+${xp} XP`, `${accuracy} % Treffer`);
   }, 500);
@@ -893,6 +929,10 @@ ACTIONS['unit-rename'] = el => {
   const name = prompt('Neuer Name für die Lektion:', old);
   if (!name || !name.trim() || name.trim() === old) return;
   state.words.forEach(w => { if (w.unit === old) w.unit = name.trim(); });
+  if (state.unitPlates[old]) {
+    state.unitPlates[name.trim()] = { ...state.unitPlates[old], ...state.unitPlates[name.trim()] };
+    delete state.unitPlates[old];
+  }
   save();
   renderWordList();
 };
@@ -902,6 +942,7 @@ ACTIONS['unit-delete'] = el => {
   const n = state.words.filter(w => w.unit === unit).length;
   if (!confirm(`Lektion „${unit}“ mit ${n} Wörtern löschen?`)) return;
   state.words = state.words.filter(w => w.unit !== unit);
+  delete state.unitPlates[unit];
   save();
   renderWordList();
 };
@@ -1114,7 +1155,7 @@ ACTIONS['scan-save'] = () => {
   }
   if (added) state.stats.scans = (state.stats.scans || 0) + 1;
   save();
-  const newBadges = unlockBadges();
+  const newBadges = unlockBadges({ scanned: added });
   if (newBadges.length) setTimeout(() => toast(`🏆 Neue Trophäe: ${newBadges.map(b => b.name).join(', ')}`), 2800);
   const rest = scanPairs().filter(p => !p.en || !p.de);
   draft.en = rest.map(p => p.en).join('\n');
@@ -1420,18 +1461,6 @@ function renderSettings() {
     </div>
 
     <div class="card">
-      <h2>🏆 Trophäen <small class="muted">${Object.keys(state.badges).length} von ${BADGES.length}</small></h2>
-      <div class="badge-grid">
-        ${BADGES.map(b => `
-          <div class="badge-tile ${state.badges[b.id] ? 'got' : ''}">
-            <span class="badge-icon">${state.badges[b.id] ? b.icon : '🔒'}</span>
-            <b>${b.name}</b>
-            <small>${b.desc}</small>
-          </div>`).join('')}
-      </div>
-    </div>
-
-    <div class="card">
       <h2>Statistik</h2>
       <ul class="facts">
         <li><span>Vokabeln</span><b>${state.words.length}</b></li>
@@ -1514,7 +1543,11 @@ async function importFile(file) {
         words: data.words,
         stats: { ...d.stats, ...data.stats },
         settings: { ...d.settings, ...data.settings },
+        badges: { ...data.badges },
+        unitPlates: { ...data.unitPlates },
+        week: data.week || null,
       };
+      migrateGoals();
       toast(`✅ ${data.words.length} Vokabeln wiederhergestellt`);
     } else {
       const have = new Set(state.words.map(w => `${w.unit}|${normalize(w.en)}|${normalize(w.de)}`));
@@ -1557,6 +1590,8 @@ ACTIONS['reset-progress'] = () => {
   state.words.forEach(w => Object.assign(w, { box: 0, due: 0, right: 0, wrong: 0 }));
   state.stats = defaultState().stats;
   state.badges = {};
+  state.unitPlates = {};
+  state.week = null;
   save();
   renderSettings();
 };
