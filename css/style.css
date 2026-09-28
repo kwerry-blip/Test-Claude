@@ -474,6 +474,8 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 .ocr-status[hidden] { display: none; }
 .pairs { margin: 0 0 14px; padding-left: 28px; }
 .pairs li { padding: 5px 0; border-bottom: 1px solid var(--line); }
+.pairs li > * { vertical-align: middle; }
+.pair-text { display: inline-block; width: calc(100% - 44px); }
 .pairs li b { display: block; }
 .pairs li span { color: var(--muted); }
 .pairs li.broken { color: var(--bad-text); }
@@ -575,3 +577,37 @@ button.stat { cursor: pointer; }
 .badge-tile small { font-size: 11px; color: var(--muted); line-height: 1.2; }
 .badge-tile.got { opacity: 1; border-color: var(--primary); box-shadow: 0 0 12px rgba(255, 43, 214, .25); }
 input[type=range] { padding: 0; accent-color: var(--primary); background: none; border: none; }
+
+/* ---------- Zuschneiden ---------- */
+
+.hidden { display: none !important; }
+#cropper:empty { display: none; }
+#cropper { display: flex; flex-direction: column; gap: 12px; }
+.crop-stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  background: #000;
+}
+.crop-stage canvas { display: block; width: 100%; height: auto; }
+.crop-box {
+  position: absolute;
+  border: 3px solid var(--blue);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, .55), 0 0 14px var(--blue);
+  cursor: move;
+}
+.crop-handle {
+  position: absolute;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 3px solid #fff;
+  box-shadow: 0 0 10px var(--primary);
+}
+.crop-handle.nw { left: -16px; top: -16px; cursor: nwse-resize; }
+.crop-handle.ne { right: -16px; top: -16px; cursor: nesw-resize; }
+.crop-handle.sw { left: -16px; bottom: -16px; cursor: nesw-resize; }
+.crop-handle.se { right: -16px; bottom: -16px; cursor: nwse-resize; }

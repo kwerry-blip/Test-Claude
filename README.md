@@ -44,12 +44,28 @@ Die App muss einmal über **https** erreichbar sein. Am einfachsten geht das kos
 Die **Texterkennung** lädt beim ersten Foto einmalig Sprachdaten aus dem Internet (einige MB).
 Danach klappt sie auch offline.
 
-## Tipps zum Fotografieren
+## Vokabeln aus dem Buch fotografieren (Lighthouse 1)
 
-- Gerade von oben, gutes Licht, möglichst nur die Vokabelspalten aufs Bild
-- Stehen Englisch und Deutsch weit auseinander (oder steht ein Beispielsatz dazwischen):
-  erst mit „Nur Englisch“ die linke Spalte, dann mit „Nur Deutsch“ die rechte Spalte fotografieren
-- Alternativ die iPhone-Funktion **„Text scannen“**: lange in ein Textfeld tippen → „Text scannen“
+Die Erfassung ist auf das Layout von **English G Lighthouse 1 (Cornelsen)** abgestimmt:
+Englisch mit Lautschrift | Deutsch | Beispielsatz. Die App erkennt die Spalten anhand der Wortpositionen,
+wirft Lautschrift und Beispielsätze weg und hängt zweizeilige Übersetzungen richtig an.
+Das funktioniert auch, wenn die Seite leicht schräg fotografiert ist.
+
+1. **Erfassen** → Lektion eintragen (z. B. „Unit 2“) → **Foto machen**
+2. Den **Rahmen um die Vokabelspalten ziehen**: ohne Bilder, ohne die Nachbarseite.
+   Die Beispielsätze rechts dürfen mit drin sein.
+3. **Text erkennen** → in der Vorschau prüfen, Fehler in den Textfeldern korrigieren,
+   falsche Zeilen mit ✕ löschen → **Speichern**
+
+Tipps: Buch flach hinlegen, gerade von oben und mit gutem Licht fotografieren. Pro Foto lieber eine halbe
+Seite als eine ganze Doppelseite. Die Zahlenkästen (fifteen, sixteen …) werden nicht sauber erkannt,
+diese Zeilen einfach löschen.
+
+Die Texterkennung ist nicht perfekt: Umlaute oder einzelne Buchstaben sind manchmal falsch („far“ statt
+„für“). Deshalb immer kurz über die Vorschau schauen. Alternativ geht die iPhone-Funktion
+**„Text scannen“**: lange in ein Textfeld tippen → „Text scannen“.
+
+Zum Ausprobieren ist ein Auszug aus **Lighthouse 1, Unit 1** schon als Beispiel-Lektion enthalten.
 
 ## Ton
 
