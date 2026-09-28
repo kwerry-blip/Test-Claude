@@ -611,3 +611,58 @@ input[type=range] { padding: 0; accent-color: var(--primary); background: none; 
 .crop-handle.ne { right: -16px; top: -16px; cursor: nesw-resize; }
 .crop-handle.sw { left: -16px; bottom: -16px; cursor: nesw-resize; }
 .crop-handle.se { right: -16px; bottom: -16px; cursor: nwse-resize; }
+
+/* ---------- Zemi mit der Punktetafel ---------- */
+
+.zemi {
+  position: fixed;
+  left: 0;
+  bottom: calc(var(--safe-bottom) + 120px);
+  width: 140px;
+  z-index: 55;
+  pointer-events: none;
+  animation: zemi-walk 4.6s linear forwards;
+}
+/* reinlaufen, in der Mitte kurz tanzen, rauslaufen */
+@keyframes zemi-walk {
+  0% { transform: translateX(-160px); }
+  30% { transform: translateX(calc(50vw - 70px)); }
+  65% { transform: translateX(calc(50vw - 70px)); }
+  100% { transform: translateX(calc(100vw + 20px)); }
+}
+.zemi-bounce { position: relative; animation: zemi-bounce .242s ease-in-out infinite alternate; }
+@keyframes zemi-bounce { to { transform: translateY(-7px); } }
+.zemi-sign {
+  position: relative;
+  z-index: 1;
+  margin: 0 -30px -8px;
+  background: #fff;
+  color: #1a1433;
+  border: 4px solid #2b1a3a;
+  border-radius: 12px;
+  padding: 6px 4px 5px;
+  text-align: center;
+  box-shadow: 0 0 0 3px var(--gold), 0 0 22px rgba(255, 212, 0, .6);
+  animation: zemi-wiggle .968s ease-in-out infinite;
+}
+.zemi-sign b { display: block; font-size: 22px; font-weight: 900; line-height: 1.1; white-space: nowrap; }
+.zemi-sign small { display: block; font-size: 11px; font-weight: 800; color: #6b5f99; line-height: 1.2; }
+@keyframes zemi-wiggle { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+.zemi-figure { display: block; width: 100%; height: auto; filter: drop-shadow(0 0 10px rgba(255, 43, 214, .45)); }
+.zemi-leg { transform-box: fill-box; transform-origin: 50% 0; animation: zemi-step .484s ease-in-out infinite alternate; }
+.zemi-leg-r { animation-delay: -.484s; }
+@keyframes zemi-step { from { transform: rotate(-10deg); } to { transform: rotate(10deg); } }
+.zemi-wink { transform-box: fill-box; transform-origin: 50% 50%; animation: zemi-wink 2.4s ease-in-out infinite; }
+@keyframes zemi-wink { 0%, 78%, 92%, 100% { transform: scaleY(1); } 84% { transform: scaleY(.1); } }
+.zemi-tail { transform-box: fill-box; transform-origin: 50% 0; animation: zemi-tail .484s ease-in-out infinite alternate; }
+.zemi-tail-r { animation-delay: -.484s; }
+@keyframes zemi-tail { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+.zemi-spark { position: absolute; color: var(--gold); font-size: 16px; animation: zemi-spark .968s ease-in-out infinite; }
+.zemi-spark.s1 { left: -6px; top: 36%; }
+.zemi-spark.s2 { right: -4px; top: 50%; animation-delay: -.3s; color: var(--blue); }
+.zemi-spark.s3 { left: 10px; bottom: 6%; animation-delay: -.6s; color: var(--primary); }
+@keyframes zemi-spark { 0%, 100% { opacity: 0; transform: scale(.4); } 50% { opacity: 1; transform: scale(1.2); } }
+@media (prefers-reduced-motion: reduce) {
+  .zemi { animation: zemi-fade 3s forwards; left: calc(50vw - 70px); }
+  @keyframes zemi-fade { 0%, 85% { opacity: 1; } 100% { opacity: 0; } }
+}

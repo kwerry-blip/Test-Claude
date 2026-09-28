@@ -102,7 +102,7 @@ function defaultState() {
     words: [],
     stats: { xp: 0, streak: 0, lastDay: null, day: null, dayXp: 0, sessions: 0, bestCombo: 0, scans: 0 },
     settings: {
-      name: DEFAULT_NAME, dailyGoal: 50, accent: 'en-GB', sounds: true, beat: true, beatVolume: 0.6,
+      name: DEFAULT_NAME, dailyGoal: 50, accent: 'en-GB', sounds: true, beat: true, beatVolume: 0.6, zemi: true,
       autoSpeak: true, hideInstallTip: false,
     },
     badges: {},
@@ -460,7 +460,12 @@ function comboUp() {
   const before = comboLevel();
   lesson.combo++;
   lesson.maxCombo = Math.max(lesson.maxCombo, lesson.combo);
-  if (before < Beat.MAX_LEVEL && comboLevel() === Beat.MAX_LEVEL) flash(pick(DROP_MSG));
+  if (before < Beat.MAX_LEVEL && comboLevel() === Beat.MAX_LEVEL) {
+    flash(pick(DROP_MSG));
+    setTimeout(() => showZemi('DROP! 🔊', `${lesson ? lesson.combo : ''} richtig in Folge`), 700);
+  } else if (lesson.combo >= 10 && lesson.combo % 5 === 0) {
+    showZemi(`${lesson.combo}er COMBO`, pick(['Die Crowd tobt! 🙌', 'Unaufhaltsam! ⚡', 'Voll im Flow! 🌊']));
+  }
 }
 
 function stopBeat() {
@@ -791,6 +796,11 @@ function finishLesson() {
       <button class="btn big" data-action="finish">Weiter</button>
     </div>`;
   if (perfect || goalReachedNow || newBadges.length || rankAfter.index > rankBefore.index) confetti();
+  setTimeout(() => {
+    if (rankAfter.index > rankBefore.index) showZemi('LEVEL UP!', `${rankAfter.icon} ${rankAfter.name}`);
+    else if (perfect) showZemi(`+${xp} XP`, '💎 Fehlerfrei!');
+    else showZemi(`+${xp} XP`, `${accuracy} % Treffer`);
+  }, 500);
 }
 
 ACTIONS.finish = () => show('home');
@@ -1404,6 +1414,7 @@ function renderSettings() {
       <label class="switch"><input type="checkbox" id="set-beat" ${st.beat ? 'checked' : ''}> 🎧 Tech-House-Beat beim Lernen</label>
       <label>Beat-Lautstärke<input type="range" id="set-volume" min="0.1" max="1" step="0.1" value="${st.beatVolume}"></label>
       <label class="switch"><input type="checkbox" id="set-sounds" ${st.sounds ? 'checked' : ''}> Soundeffekte bei richtig/falsch</label>
+      <label class="switch"><input type="checkbox" id="set-zemi" ${st.zemi ? 'checked' : ''}> 💃 Zemi mit der Punktetafel</label>
       <label class="switch"><input type="checkbox" id="set-speak" ${st.autoSpeak ? 'checked' : ''}> Englische Wörter automatisch vorlesen</label>
       <button class="btn ghost" data-action="test-voice">🔊 Stimme testen</button>
     </div>
@@ -1457,6 +1468,7 @@ function renderSettings() {
   bind('#set-accent', el => { st.accent = el.value; speak('Hello! How are you?'); });
   bind('#set-sounds', el => { st.sounds = el.checked; if (el.checked) beep(true); });
   bind('#set-beat', el => { st.beat = el.checked; });
+  bind('#set-zemi', el => { st.zemi = el.checked; if (el.checked) showZemi('Hi Felix!', 'Ich zeig dir deine Punkte'); });
   bind('#set-volume', el => { st.beatVolume = Number(el.value); Beat.setVolume(st.beatVolume); beep(true); });
   bind('#set-speak', el => { st.autoSpeak = el.checked; });
   $('#import-file').addEventListener('change', e => {
