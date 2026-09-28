@@ -1,6 +1,6 @@
 /* Service Worker: speichert die App auf dem Gerät, damit sie auch ohne Internet startet.
    Bei Änderungen an der App die Versionsnummer erhöhen. */
-const VERSION = 'v5';
+const VERSION = 'v6';
 const CACHE = `vokabeltrainer-${VERSION}`;
 const APP_FILES = [
   './',

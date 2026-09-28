@@ -1,7 +1,7 @@
 # 🎧 Vocab Beats – Englisch-Vokabeltrainer für Felix
 
 Ein Vokabeltrainer im Stil von Duolingo, aber mit **den eigenen Vokabeln aus dem Schulbuch** – und mit
-Tech-House-Beat: Jede richtige Antwort in Folge baut den Track weiter auf (Kick → Hi-Hats → Bass → Clap → **Drop**).
+Beat (Tech-House, Hard-Tekk oder Schranz): Jede richtige Antwort in Folge baut den Track weiter auf (Kick → Hi-Hats → Bass → Clap → **Drop**).
 Ein Fehler lässt den Track kurz „absaufen“ und der Aufbau beginnt von vorn.
 Es ist eine Web-App (PWA): Sie läuft in Safari und lässt sich auf dem iPhone wie eine normale App auf den
 Home-Bildschirm legen. Danach funktioniert sie auch **ohne Internet**. Alle Daten bleiben auf dem Gerät.
@@ -10,7 +10,10 @@ Home-Bildschirm legen. Danach funktioniert sie auch **ohne Internet**. Alle Date
 
 - **Lernen wie bei Duolingo**: kurze Lektionen („Tracks“) mit 10 Wörtern, Fortschrittsbalken, XP, Tagesziel,
   🔥-Serie (Tage in Folge), Konfetti 🎉
-- **Tech-House-Beat** (124 BPM), live im Browser erzeugt – ohne Audiodateien. Lautstärke einstellbar, abschaltbar.
+- **Beat in drei Stilen**, live im Browser erzeugt – ohne Audiodateien:
+  🎧 Tech-House (124 BPM), 🔨 Hard-Tekk (165 BPM, verzerrter Kick, Offbeat-Bass, Lead-Melodie),
+  ⚙️ Schranz (152 BPM, stampfender Kick, Rumble, metallische Percussion) oder 🔀 Zufall pro Track.
+  Unter „Mehr“ wählbar, mit Probehören; Lautstärke einstellbar, abschaltbar.
 - **Ziele fürs ganze Schuljahr** (Tab „Erfolge“):
   - **Schallplatten pro Unit**: 🥉 Bronze (jedes Wort einmal richtig) → 🥈 Silber → 🥇 Gold (alle Wörter sicher)
     → 💎 Platin (alle auf höchster Stufe, dauert durch die Wiederholungsabstände ca. zwei Monate)
@@ -96,7 +99,7 @@ Reines HTML/CSS/JavaScript ohne Build-Schritt:
 | `index.html` | Grundgerüst |
 | `js/app.js` | App-Logik (Ansichten, Lektionen, Speicherung, Kamera/OCR) |
 | `js/answers.js` | Antwortprüfung und Zerlegen des erkannten Textes |
-| `js/beat.js` | Beat-Engine (Web Audio) und Soundeffekte |
+| `js/beat.js` | Beat-Engine (Web Audio) mit Tech-House, Hard-Tekk und Schranz, Soundeffekte |
 | `js/zemi.js` | Zemi, die Figur mit der Punktetafel (SVG) |
 | `js/goals.js` | Ziele: Unit-Schallplatten, Erfolgs-Serien, Spezial-Erfolge, Wochen-Challenge |
 | `css/style.css` | Design |

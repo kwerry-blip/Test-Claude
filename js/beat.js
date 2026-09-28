@@ -1,16 +1,29 @@
-/* Tech-House-Beat, live im Browser erzeugt (Web Audio, keine Audiodateien).
+/* Beat in drei Stilen (Tech-House, Hard-Tekk, Schranz), live im Browser erzeugt (Web Audio, keine Audiodateien).
    Jede richtige Antwort in Folge schaltet eine weitere Spur frei – bis zum Drop. */
 'use strict';
 
 const Beat = (() => {
-  const BPM = 124;
   const MAX_LEVEL = 4;
   // Rollende Bassline in A-Moll, 16 Schritte (0 = Pause)
   const BASS = [0, 0, 55, 0, 0, 0, 55, 65.4, 0, 0, 55, 0, 0, 0, 49, 55];
   const STAB = [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0];
   const CHORD = [220, 261.6, 329.6, 392]; // Am7
 
-  let ctx, bus, filter, master, noise, timer;
+  // Hard-Tekk: Offbeat-Bass und Lead-Melodie in A-Moll
+  const TEKK_BASS = [0, 0, 55, 0, 0, 0, 55, 0, 0, 0, 55, 0, 0, 0, 65.4, 0];
+  const TEKK_LEAD = [880, 0, 0, 1046.5, 0, 0, 987.8, 0, 880, 0, 0, 784, 0, 659.3, 0, 784];
+  // Schranz: Rumble zwischen den Kicks, metallischer Percussion-Loop, Stab
+  const SCHRANZ_METAL = [0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1];
+  const SCHRANZ_STAB = [0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0];
+
+  const STYLES = {
+    techhouse: { id: 'techhouse', name: 'Tech-House', bpm: 124 },
+    hardtekk: { id: 'hardtekk', name: 'Hard-Tekk', bpm: 165 },
+    schranz: { id: 'schranz', name: 'Schranz', bpm: 152 },
+  };
+  let style = STYLES.techhouse;
+
+  let ctx, bus, filter, master, noise, timer, drive;
   let step = 0, nextTime = 0, level = 1, running = false, volume = 0.6;
 
   function init() {
@@ -24,6 +37,18 @@ const Beat = (() => {
     master = ctx.createGain();
     master.gain.value = volume;
     bus.connect(filter).connect(comp).connect(master).connect(ctx.destination);
+    // Verzerrer für Hard-Tekk und Schranz
+    drive = ctx.createWaveShaper();
+    const curve = new Float32Array(1024);
+    for (let i = 0; i < curve.length; i++) {
+      const x = i / (curve.length - 1) * 2 - 1;
+      curve[i] = Math.tanh(x * 6);
+    }
+    drive.curve = curve;
+    drive.oversample = '2x';
+    const driveOut = ctx.createGain();
+    driveOut.gain.value = 0.45;
+    drive.connect(driveOut).connect(bus);
     noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const d = noise.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -96,7 +121,71 @@ const Beat = (() => {
     }
   }
 
+  // Verzerrter Kick: höher gestimmt, länger, durch den Verzerrer
+  function hardKick(t, start, end, decay, gain) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.setValueAtTime(start, t);
+    o.frequency.exponentialRampToValueAtTime(end, t + 0.09);
+    env(g, t, gain, decay);
+    o.connect(g).connect(drive);
+    o.start(t);
+    o.stop(t + decay + 0.05);
+    // Klick für Durchsetzungskraft
+    noiseHit(t, 'highpass', 3000, 0.25, 0.015);
+  }
+
+  function synth(t, type, freq, cutoff, peak, decay, dest = bus, q = 4) {
+    const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = type;
+    o.frequency.value = freq;
+    f.type = 'lowpass';
+    f.Q.value = q;
+    f.frequency.setValueAtTime(cutoff, t);
+    f.frequency.exponentialRampToValueAtTime(Math.max(80, cutoff / 6), t + decay);
+    env(g, t, peak, decay);
+    o.connect(f).connect(g).connect(dest);
+    o.start(t);
+    o.stop(t + decay + 0.05);
+  }
+
+  function playHardtekk(s, t) {
+    if (s % 4 === 0) hardKick(t, 220, 48, 0.3, 1);
+    if (level >= 1 && s % 4 === 2) noiseHit(t, 'highpass', 8000, 0.3, 0.06);
+    if (level >= 2 && TEKK_BASS[s]) synth(t, 'sawtooth', TEKK_BASS[s], 1400, 0.4, 0.14, drive, 6);
+    if (level >= 3) {
+      if (s === 4 || s === 12) clap(t);
+      noiseHit(t, 'highpass', 10000, s % 2 ? 0.06 : 0.1, 0.025);
+    }
+    if (level >= 4 && TEKK_LEAD[s]) {
+      synth(t, 'square', TEKK_LEAD[s], 3500, 0.07, 0.16);
+      synth(t, 'sawtooth', TEKK_LEAD[s] * 1.005, 3000, 0.05, 0.16);
+    }
+  }
+
+  function playSchranz(s, t) {
+    if (s % 4 === 0) hardKick(t, 180, 42, 0.22, 1.2);
+    // Rumble: tiefer, verzerrter Nachhall zwischen den Kicks
+    if (level >= 2 && s % 4 !== 0) synth(t, 'sawtooth', 43.6, 380, s % 4 === 1 ? 0.28 : 0.2, 0.1, drive, 2);
+    if (level >= 1 && s % 4 === 2) noiseHit(t, 'highpass', 6500, 0.35, 0.12);
+    if (level >= 3) {
+      if (SCHRANZ_METAL[s]) {
+        noiseHit(t, 'bandpass', 2600, 0.45, 0.05);
+        synth(t, 'square', 1234, 5000, 0.03, 0.04);
+      }
+      if (s === 4 || s === 12) clap(t);
+    }
+    if (level >= 4) {
+      if (SCHRANZ_STAB[s]) {
+        synth(t, 'sawtooth', 110, 2400, 0.3, 0.12, drive, 8);
+        synth(t, 'sawtooth', 164.8, 2400, 0.22, 0.12, drive, 8);
+      }
+      noiseHit(t, 'highpass', 11000, 0.08, 0.02);
+    }
+  }
+
   function playStep(s, t) {
+    if (style.id === 'hardtekk') return playHardtekk(s, t);
+    if (style.id === 'schranz') return playSchranz(s, t);
     if (s % 4 === 0) kick(t);
     if (level >= 1 && s % 4 === 2) noiseHit(t, 'highpass', 7000, 0.25, 0.09);
     if (level >= 2 && BASS[s]) bass(t, BASS[s]);
@@ -111,7 +200,7 @@ const Beat = (() => {
   }
 
   function scheduler() {
-    const stepDur = 60 / BPM / 4;
+    const stepDur = 60 / style.bpm / 4;
     while (nextTime < ctx.currentTime + 0.12) {
       playStep(step, nextTime);
       nextTime += stepDur;
@@ -199,8 +288,13 @@ const Beat = (() => {
     o.stop(t + 0.45);
   }
 
+  function setStyle(id) {
+    style = STYLES[id] || STYLES.techhouse;
+  }
+
   return {
-    start, stop, setLevel, setVolume, duck, sfxCorrect, sfxWrong,
+    start, stop, setLevel, setStyle, STYLES,
+    get style() { return style; }, setVolume, duck, sfxCorrect, sfxWrong,
     get level() { return level; },
     get running() { return running; },
     MAX_LEVEL,

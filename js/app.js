@@ -27,7 +27,18 @@ const SAMPLE_WORDS = [
 
 const PRAISE = ['Fett! 🔥', 'Banger! 💥', 'Voll im Takt! 🎶', 'Sauber! ✨', 'Stark! 💪', 'Nice! 😎', 'Läuft! 🚀'];
 const WRONG_MSG = ['Knapp daneben! 🎧', 'Aus dem Takt 😅', 'Nicht ganz – weiter geht’s!'];
-const DROP_MSG = ['DROP! 🔊', 'Bass rein! 🔊', 'Crowd geht ab! 🙌'];
+const DROP_MSG = {
+  techhouse: ['DROP! 🔊', 'Bass rein! 🔊', 'Crowd geht ab! 🙌'],
+  hardtekk: ['TEKK! 🔨', 'HART! 🔨', 'Vollgas! 🚀'],
+  schranz: ['SCHRANZ! ⚙️', 'Maschine an! ⚙️', 'Volle Kanne! 🔊'],
+};
+
+// Stil für den nächsten Track wählen und die Animationen an das Tempo anpassen
+function applyBeatStyle(id = state.settings.beatStyle) {
+  const styleId = id === 'mix' ? pick(Object.keys(Beat.STYLES)) : id;
+  Beat.setStyle(styleId);
+  document.documentElement.style.setProperty('--beat', `${(60 / Beat.style.bpm).toFixed(3)}s`);
+}
 
 // DJ-Ränge nach gesammelten XP – ausgelegt auf ein ganzes Schuljahr (ca. 1–2 Tracks pro Tag)
 const RANKS = [
@@ -95,7 +106,7 @@ function defaultState() {
       scans: 0, perfect: 0, goalDays: 0, typed: 0, listened: 0, matches: 0, fixed: 0, weeklyDone: 0, learnedDays: [],
     },
     settings: {
-      name: DEFAULT_NAME, dailyGoal: 50, accent: 'en-GB', sounds: true, beat: true, beatVolume: 0.6, zemi: true,
+      name: DEFAULT_NAME, dailyGoal: 50, accent: 'en-GB', sounds: true, beat: true, beatVolume: 0.6, beatStyle: 'techhouse', zemi: true,
       autoSpeak: true, hideInstallTip: false,
     },
     badges: {},
@@ -403,6 +414,7 @@ function startLesson(unit) {
   document.body.classList.add('in-lesson');
   if (state.settings.beat) {
     try {
+      applyBeatStyle();
       Beat.setVolume(state.settings.beatVolume);
       Beat.setLevel(comboLevel());
       Beat.start();
@@ -451,7 +463,7 @@ function comboUp() {
   lesson.combo++;
   lesson.maxCombo = Math.max(lesson.maxCombo, lesson.combo);
   if (before < Beat.MAX_LEVEL && comboLevel() === Beat.MAX_LEVEL) {
-    flash(pick(DROP_MSG));
+    flash(pick(DROP_MSG[Beat.style.id] || DROP_MSG.techhouse));
     setTimeout(() => showZemi('DROP! 🔊', `${lesson ? lesson.combo : ''} richtig in Folge`), 700);
   } else if (lesson.combo >= 10 && lesson.combo % 5 === 0) {
     showZemi(`${lesson.combo}er COMBO`, pick(['Die Crowd tobt! 🙌', 'Unaufhaltsam! ⚡', 'Voll im Flow! 🌊']));
@@ -1453,6 +1465,10 @@ function renderSettings() {
         <select id="set-accent">${opt('en-GB', st.accent, '🇬🇧 Britisch')}${opt('en-US', st.accent, '🇺🇸 Amerikanisch')}</select>
       </label>
       <label class="switch"><input type="checkbox" id="set-beat" ${st.beat ? 'checked' : ''}> 🎧 Tech-House-Beat beim Lernen</label>
+      <label>Musikstil
+        <select id="set-style">${opt('techhouse', st.beatStyle, '🎧 Tech-House (124 BPM)')}${opt('hardtekk', st.beatStyle, '🔨 Hard-Tekk (165 BPM)')}${opt('schranz', st.beatStyle, '⚙️ Schranz (152 BPM)')}${opt('mix', st.beatStyle, '🔀 Zufall – jeder Track anders')}</select>
+      </label>
+      <button type="button" class="btn ghost" data-action="preview-beat" id="preview-beat">▶ Probehören</button>
       <label>Beat-Lautstärke<input type="range" id="set-volume" min="0.1" max="1" step="0.1" value="${st.beatVolume}"></label>
       <label class="switch"><input type="checkbox" id="set-sounds" ${st.sounds ? 'checked' : ''}> Soundeffekte bei richtig/falsch</label>
       <label class="switch"><input type="checkbox" id="set-zemi" ${st.zemi ? 'checked' : ''}> 💃 Zemi mit der Punktetafel</label>
@@ -1497,6 +1513,7 @@ function renderSettings() {
   bind('#set-accent', el => { st.accent = el.value; speak('Hello! How are you?'); });
   bind('#set-sounds', el => { st.sounds = el.checked; if (el.checked) beep(true); });
   bind('#set-beat', el => { st.beat = el.checked; });
+  bind('#set-style', el => { st.beatStyle = el.value; if (Beat.running) ACTIONS['preview-beat'](); });
   bind('#set-zemi', el => { st.zemi = el.checked; if (el.checked) showZemi('Hi Felix!', 'Ich zeig dir deine Punkte'); });
   bind('#set-volume', el => { st.beatVolume = Number(el.value); Beat.setVolume(st.beatVolume); beep(true); });
   bind('#set-speak', el => { st.autoSpeak = el.checked; });
@@ -1506,6 +1523,34 @@ function renderSettings() {
     if (file) importFile(file);
   });
 }
+
+// Beat 8 Sekunden in voller Ausbaustufe anspielen
+let previewTimer;
+ACTIONS['preview-beat'] = () => {
+  clearTimeout(previewTimer);
+  const btn = $('#preview-beat');
+  if (Beat.running && btn && btn.dataset.playing) {
+    stopBeat();
+    btn.textContent = '▶ Probehören';
+    delete btn.dataset.playing;
+    return;
+  }
+  Beat.stop();
+  applyBeatStyle();
+  Beat.setVolume(state.settings.beatVolume);
+  Beat.setLevel(Beat.MAX_LEVEL);
+  Beat.start();
+  document.body.classList.add('beat-on');
+  if (btn) {
+    btn.textContent = `⏹ Stopp (${Beat.style.name})`;
+    btn.dataset.playing = '1';
+  }
+  previewTimer = setTimeout(() => {
+    stopBeat();
+    const b = $('#preview-beat');
+    if (b) { b.textContent = '▶ Probehören'; delete b.dataset.playing; }
+  }, 8000);
+};
 
 ACTIONS['test-voice'] = () => speak('Hello! This is your vocabulary trainer.');
 
