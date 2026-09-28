@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#58cc02"/>
+  <rect x="96" y="120" width="320" height="280" rx="40" fill="#fff"/>
+  <rect x="96" y="120" width="160" height="280" rx="40" fill="#ddf4ff"/>
+  <rect x="216" y="120" width="40" height="280" fill="#ddf4ff"/>
+  <text x="176" y="300" font-family="Arial Rounded MT Bold, Arial, sans-serif" font-weight="900" font-size="130" text-anchor="middle" fill="#1cb0f6">A</text>
+  <text x="336" y="300" font-family="Arial Rounded MT Bold, Arial, sans-serif" font-weight="900" font-size="130" text-anchor="middle" fill="#58cc02">Ä</text>
+  <rect x="96" y="400" width="320" height="22" rx="11" fill="#46a302"/>
+</svg>
